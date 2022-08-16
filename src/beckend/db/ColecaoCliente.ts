@@ -1,34 +1,61 @@
-// Estrutura básica métodos salvar
-import firebase from "../../../node_modules/firebase/index";
-import Cliente from "../../core/Cliente";
-import ClienteRepositorio from "../../core/ClienteRepositorio";
+import { dataBase } from '../config'
+import firestore, {
+    addDoc,
+    collection,
+    deleteDoc,
+    doc,
+    getDoc,
+    getDocs,
+    setDoc,
+} from 'firebase/firestore'
+import Cliente from '../../core/Cliente'
+import ClienteRepositorio from '../../core/ClienteRepositorio'
 
 export default class ColecaoCliente implements ClienteRepositorio {
 
-    // Converte para firestore
-    conversor = {
-        toFirestore(cliente: Cliente) {
+    #conversor = {
+        toFirestore: (cliente: Cliente) => {
             return {
-
                 nome: cliente.nome,
                 idade: cliente.idade,
             }
-
         },
-        fromFirestore(snapshot: firebase.firestore.QueryDocumentSnapshot, options) {
+        fromFirestore: (
+            snapshot: firestore.QueryDocumentSnapshot,
+            options: firestore.SnapshotOptions,
+        ) => {
+            const dados = snapshot.data(options)
+            return new Cliente(dados.nome, dados.idade, snapshot.id)
+        },
+    }
 
+    #colecaoCliente = collection(dataBase, 'clientes').withConverter(this.#conversor)
+
+    async salvar(cliente: Cliente): Promise<Cliente> {
+        if (cliente?.id) {
+            await setDoc(
+                doc(dataBase, 'clientes', cliente.id).withConverter(this.#conversor),
+                cliente,
+            )
+            return cliente
+        } else {
+            const docRef = await addDoc(
+                this.#colecaoCliente,
+                cliente,
+            )
+            const doc = await getDoc(docRef)
+            return doc.data()
         }
     }
 
-
-    async salvar(cliente: Cliente): Promise<Cliente> {
-        return null
-    }
-
     async excluir(cliente: Cliente): Promise<void> {
-        return null
+        return await deleteDoc(doc(dataBase, 'clientes', cliente.id))
     }
+
     async obterTodos(): Promise<Cliente[]> {
-        return null
+        const clientesCol = this.#colecaoCliente
+        const clientesSnapshot = await getDocs(clientesCol)
+        const clientesList = clientesSnapshot.docs.map((doc) => doc.data()) ?? []
+        return clientesList
     }
 }
