@@ -1,60 +1,21 @@
-import { async } from "@firebase/util";
-import { useEffect, useState } from "react";
-import ColecaoCliente from "../beckend/db/ColecaoCliente";
 import Botao from "../components/Botao";
 import Formulario from "../components/Formulario";
 import Layout from "../components/Layout";
 import Tabela from "../components/Tabela";
-import Cliente from "../core/Cliente";
-import ClienteRepositorio from "../core/ClienteRepositorio";
+import useClientes from "../hooks/useClientes";
 
 export default function Home() {
 
-  const repo: ClienteRepositorio = new ColecaoCliente()
-
-  const [cliente, setCliente] = useState<Cliente>(Cliente.vazio())
-  const [clientes, setClientes] = useState<Cliente[]>([])
-  const [visivel, setVisivel] = useState<'tabela' | 'form'>('tabela')
-
-  // Inicializar o componente
-  useEffect(obterTodos, [])
-
-  function obterTodos() {
-    repo.obterTodos().then(clientes => {
-      setClientes(clientes)
-      setVisivel('tabela')
-
-    })
-  }
-
-
-  // const clientes = [
-  //   new Cliente('Alex', 27, '1'),
-  //   new Cliente('Yury', 22, '2'),
-  //   new Cliente('Luh', 50, '3'),
-  //   new Cliente('Joel', 84, '4')
-  // ]
-
-  function clienteSelecionado(cliente: Cliente) {
-    setCliente(cliente)
-    setVisivel('form')
-  }
-
-  async function clienteExcluido(cliente: Cliente) {
-    await repo.excluir(cliente)
-    obterTodos()
-
-  }
-
-  function novoCliente() {
-    setCliente(Cliente.vazio())
-    setVisivel('form')
-
-  }
-  async function salvarCliente(cliente: Cliente) {
-    await repo.salvar(cliente)
-    obterTodos()
-  }
+  const {
+    cliente,
+    clientes,
+    novoCliente,
+    salvarCliente,
+    selecionarCliente,
+    excluirCliente,
+    tabelaioVisivel,
+    exibirTabela
+  } = useClientes()
 
   return (
     <div className={`
@@ -63,7 +24,7 @@ export default function Home() {
       text-white
     `}>
       <Layout titulo="Cadrasto Simples">
-        {visivel === 'tabela' ? (
+        {tabelaioVisivel ? (
 
           <>
             <div className="flex justify-end">
@@ -73,8 +34,8 @@ export default function Home() {
               </Botao>
             </div>
             <Tabela clientes={clientes}
-              clienteSelecionado={clienteSelecionado}
-              clienteExcluido={clienteExcluido}
+              clienteSelecionado={selecionarCliente}
+              clienteExcluido={excluirCliente}
             />
           </>
         ) : (
@@ -82,7 +43,7 @@ export default function Home() {
           <Formulario
             cliente={cliente}
             clienteMudou={salvarCliente}
-            cancelado={() => setVisivel('tabela')}
+            cancelado={exibirTabela}
           />
         )}
       </Layout>
